@@ -36,6 +36,10 @@ body {
   align-items: center;
 }
 
+.worm-img {
+  clip-path: polygon(0 0, 10% 0, 10% 100%, 0 100%);
+}
+
 .worm-hole {
   grid-column: 1/-1;
 }
@@ -68,4 +72,8 @@ body {
 .mole {
   position: relative;
   right: 34px;
+}
+
+.mole.hungry {
+  cursor: url("/assets/images/cursor-worm.png"), auto;
 }
