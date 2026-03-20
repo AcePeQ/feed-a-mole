@@ -1,25 +1,17 @@
+const TIMING = {
+  HUNGRY_DURATION: 2000,
+  TRANSITION: 500,
+  MIN_WAIT: 2000,
+  MAX_WAIT_SPREAD: 18001,
+};
+
 class Mole {
-  constructor(id, status, runAgainAt) {
+  constructor(id) {
     this.id = id;
-    this.status = status;
-    this.runAgainAt = runAgainAt;
-  }
-
-  set changeStatus(newStatus) {
-    this.status = newStatus;
-  }
-  set changeRunAgainAt(newTime) {
-    this.runAgainAt = newTime;
-  }
-  get getStatus() {
-    return this.status;
-  }
-  get getRunAgainAt() {
-    return this.runAgainAt;
-  }
-
-  get getMoleId() {
-    return this.id;
+    this.status = "wait";
+    this.prevStatus = "";
+    this.runAgainAt = Date.now();
+    this.isKing = false;
   }
 }
 
@@ -28,91 +20,121 @@ const worm = document.querySelector(".worm-img");
 
 const moles = [];
 let score = 1;
+let gameOver = false;
 
 function createMoles() {
   holes.forEach((hole) => {
     const holeId = hole.id;
-    const mole = new Mole(holeId, "wait", Date.now());
+    const mole = new Mole(holeId);
+
+    const image = document.getElementById(holeId).firstElementChild;
+
+    image.addEventListener("click", () => handleScore(mole, image));
 
     moles.push(mole);
   });
 }
 
-function getStatusFromClass(element) {
-  if (!element) return;
+function getImageStatus(status, isKing) {
+  let imageUrl = "";
 
-  return element.classList[1];
-}
+  if (status === "wait") {
+    return imageUrl;
+  }
 
-function getImageStatus(status) {
-  const imageUrl = `./assets/images/mole-${status}.png`;
+  if (isKing) {
+    imageUrl = `./assets/images/king-mole-${status}.png`;
+  } else {
+    imageUrl = `./assets/images/mole-${status}.png`;
+  }
+
   return imageUrl;
 }
 
-function tick() {
-  moles.forEach((mole) => {
-    const image = document.getElementById(mole.getMoleId).firstElementChild;
+function handleScore(mole) {
+  if (mole.prevStatus !== "hungry") return;
 
-    let moleStatus = mole.getStatus;
-    let runAgainAt = mole.getRunAgainAt;
+  if (mole.isKing) {
+    score += 2;
+  } else {
+    score++;
+  }
+
+  if (score >= 10) {
+    gameOver = true;
+
+    const gameContainer = document.getElementById("game");
+    const winImage = document.getElementById("gameWinningImage");
+
+    gameContainer.classList.add("hide");
+    winImage.classList.add("show");
+
+    return;
+  }
+
+  mole.status = "fed";
+  mole.runAgainAt = Date.now();
+
+  worm.style.clipPath = `polygon(0 0, ${score * 10}% 0, ${score * 10}% 100%, 0 100%)`;
+}
+
+function handleMakeAKing(moles) {
+  const waiting = moles.filter((m) => m.status === "wait");
+  if (!waiting.length) return;
+  waiting[Math.floor(Math.random() * waiting.length)].isKing = true;
+}
+
+function tick() {
+  const isAnyMoleKing = moles.some((mole) => mole.isKing);
+
+  if (!isAnyMoleKing) handleMakeAKing(moles);
+
+  moles.forEach((mole) => {
+    const runAgainAt = mole.runAgainAt;
 
     if (Date.now() > runAgainAt) {
+      const image = document.getElementById(mole.id).firstElementChild;
+
+      const moleIsKing = mole.isKing;
+      const moleStatus = mole.status;
+
+      image.src = getImageStatus(moleStatus, moleIsKing);
+
+      const oldStatus = mole.prevStatus;
+      if (oldStatus) image.classList.remove(oldStatus);
+      image.classList.add(moleStatus);
+
       switch (moleStatus) {
         case "hungry":
-          image.classList.add("hungry");
-
-          image.src = getImageStatus(moleStatus);
-
-          mole.changeRunAgainAt = Date.now() + 2000;
-          mole.changeStatus = "sad";
+          mole.prevStatus = moleStatus;
+          mole.status = "sad";
+          mole.runAgainAt = Date.now() + TIMING.HUNGRY_DURATION;
           break;
         case "sad":
-          image.classList.remove("hungry");
-          image.classList.add("sad");
-
-          image.src = getImageStatus(moleStatus);
-
-          mole.changeRunAgainAt = Date.now() + 500;
-          mole.changeStatus = "leaving";
-          break;
         case "fed":
-          image.classList.remove("hungry");
-          image.classList.add("fed");
-
-          image.src = getImageStatus(moleStatus);
-
-          mole.changeRunAgainAt = Date.now() + 500;
-          mole.changeStatus = "leaving";
+          mole.prevStatus = moleStatus;
+          mole.status = "leaving";
+          mole.runAgainAt = Date.now() + TIMING.TRANSITION;
           break;
         case "leaving":
-          image.classList.remove("sad");
-          image.classList.remove("fed");
-          image.classList.add("leaving");
-
-          image.src = getImageStatus(moleStatus);
-
-          mole.changeRunAgainAt = Date.now() + 500;
-          mole.changeStatus = "wait";
+          mole.prevStatus = moleStatus;
+          mole.status = "wait";
+          mole.runAgainAt = Date.now() + TIMING.TRANSITION;
           break;
         default:
-          image.classList.remove("leaving");
-          image.classList.add("wait");
-
-          image.src = "";
-
-          mole.changeRunAgainAt =
-            Date.now() + Math.floor(Math.random() * 18001) + 2000;
-          mole.changeStatus = "hungry";
+          if (mole.isKing) mole.isKing = false;
+          mole.prevStatus = moleStatus;
+          mole.status = "hungry";
+          mole.runAgainAt =
+            Date.now() +
+            Math.floor(Math.random() * TIMING.MAX_WAIT_SPREAD) +
+            TIMING.HUNGRY_DURATION;
           break;
       }
     }
   });
-  function getImageStatus(status) {
-    const imageUrl = `./assets/images/mole-${status}.png`;
-    return imageUrl;
-  }
 
-  requestAnimationFrame(tick);
+  if (!gameOver) requestAnimationFrame(tick);
 }
 
 function init() {
@@ -121,75 +143,3 @@ function init() {
 }
 
 init();
-
-// function handleScore(image) {
-//   score++;
-
-//   if (score === 11) {
-//     return nothing;
-//   }
-
-//   worm.style.clipPath = `polygon(0 0, ${(score + 1) * 10}% 0, ${(score + 1) * 10}% 100%, 0 100%)`;
-// }
-
-// holes.forEach((hole) => {
-//   const image = hole.firstElementChild;
-//   hole.addEventListener("click", () => {
-//     if (!image.classList.contains("hungry")) return;
-
-//     handleScore(image);
-
-//     moleStatus = "fed";
-//     runAgainAt = Date.now();
-//   });
-
-//   let moleStatus = "wait";
-//   let runAgainAt = Date.now();
-
-//   function refCounter() {
-//     if (Date.now() > runAgainAt) {
-//       switch (moleStatus) {
-//         case "hungry":
-//           image.classList.add("hungry");
-//           image.src = getImageStatus("hungry");
-//           runAgainAt = Date.now() + 2000;
-//           moleStatus = "sad";
-//           break;
-//         case "sad":
-//           image.classList.remove("hungry");
-//           image.classList.add("sad");
-//           image.src = getImageStatus("sad");
-//           runAgainAt = Date.now() + 500;
-//           moleStatus = "leaving";
-//           break;
-//         case "fed":
-//           image.classList.remove("hungry");
-//           image.classList.add("fed");
-//           image.src = getImageStatus("fed");
-//           runAgainAt = Date.now() + 500;
-//           moleStatus = "leaving";
-//           break;
-//         case "leaving":
-//           image.classList.remove("sad");
-//           image.classList.remove("fed");
-//           image.classList.add("leaving");
-
-//           image.src = getImageStatus("leaving");
-//           runAgainAt = Date.now() + 500;
-//           moleStatus = "wait";
-//           break;
-//         default:
-//           image.classList.remove("leaving");
-//           image.classList.add("wait");
-//           image.src = "";
-//           let waitFor = Math.floor(Math.random() * 18001) + 2000;
-//           runAgainAt = Date.now() + waitFor;
-//           moleStatus = "hungry";
-//           break;
-//       }
-//     }
-
-//     requestAnimationFrame(refCounter);
-//   }
-//   requestAnimationFrame(refCounter);
-// });

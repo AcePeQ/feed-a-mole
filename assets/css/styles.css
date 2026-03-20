@@ -38,6 +38,8 @@ body {
 
 .worm-img {
   clip-path: polygon(0 0, 10% 0, 10% 100%, 0 100%);
+
+  transition: all 0.3s;
 }
 
 .worm-hole {
@@ -76,4 +78,20 @@ body {
 
 .mole.hungry {
   cursor: url("/assets/images/cursor-worm.png"), auto;
+}
+
+.win {
+  display: none;
+  max-width: 100vw;
+  max-height: 100vh;
+
+  margin: 0 auto;
+}
+
+.show {
+  display: block;
+}
+
+.hide {
+  display: none;
 }
