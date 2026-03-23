@@ -29,7 +29,7 @@ function createMoles() {
 
     const image = document.getElementById(holeId).firstElementChild;
 
-    image.addEventListener("click", () => handleScore(mole, image));
+    image.addEventListener("click", () => handleScore(mole));
 
     moles.push(mole);
   });
